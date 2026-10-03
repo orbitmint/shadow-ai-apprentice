@@ -116,7 +116,7 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         assetTagCheck: false,
         decemberVendorCheck: false,
       });
-      speakText("Switched to IT Incident Escalation scenario. Observing Marcus Vance on SRE production triage.");
+      stopSpeaking();
     } else {
       setDialogue(INITIAL_DIALOGUE_HISTORY);
       setWorkMap(INITIAL_WORK_MAP);
@@ -125,7 +125,7 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         assetTagCheck: false,
         decemberVendorCheck: false,
       });
-      speakText("Switched to Accounts Payable scenario. Observing Sabine Weber on invoice triage.");
+      stopSpeaking();
     }
   };
 
@@ -313,14 +313,8 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
 
       setMode('map');
-      setAgentStatus('speaking');
-
-      const teachBack = `Alright, let me run through this to make sure I got it straight: ${data.teachBackSummary}`;
-      speakText(teachBack, {
-        onEnd: () => {
-          setAgentStatus('listening');
-        },
-      });
+      setAgentStatus('idle');
+      stopSpeaking();
     } catch (err) {
       console.error('Debrief error:', err);
       setMode('map');
@@ -335,8 +329,6 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const confirmedSteps = workMap.steps.map((s) => ({ ...s, confirmedByExpert: true }));
       setWorkMap({ ...workMap, steps: confirmedSteps });
     }
-    const praise = 'Playbook confirmed. Ready to train Rook.';
-    speakText(praise);
   };
 
   // Teach Mode Interception Logic (AP)
