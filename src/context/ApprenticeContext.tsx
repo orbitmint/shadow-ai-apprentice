@@ -48,7 +48,7 @@ interface ApprenticeContextType {
   currentQuestion: string | null;
   dialogue: DialogueTurn[];
   askAgentQuestion: (question: string, context?: string, isGuardrail?: boolean) => Promise<void>;
-  submitExpertAnswer: (answer: string) => Promise<void>;
+  submitExpertAnswer: (answer: string, speakAnswer?: boolean) => Promise<void>;
   // Events & Timeline
   events: ScreenEvent[];
   recordScreenEvent: (event: Partial<ScreenEvent>) => void;
@@ -230,7 +230,7 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     });
   };
 
-  const submitExpertAnswer = async (answer: string) => {
+  const submitExpertAnswer = async (answer: string, speakAnswer: boolean = false) => {
     const expertTurn: DialogueTurn = {
       id: `a-${Date.now()}`,
       speaker: 'expert',
@@ -241,11 +241,20 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     setDialogue((prev) => [...prev, expertTurn]);
     setCurrentQuestion(null);
-    setAgentStatus('listening');
 
-    // Acknowledge briefly
+    if (speakAnswer) {
+      setAgentStatus('speaking');
+      await speakText(answer, { persona: 'sabine' });
+    }
+
+    setAgentStatus('speaking');
     const ack = "Got it, noted that down.";
-    speakText(ack);
+    await speakText(ack, {
+      persona: 'apprentice',
+      onEnd: () => {
+        setAgentStatus('listening');
+      },
+    });
   };
 
   const recordScreenEvent = (eventData: Partial<ScreenEvent>) => {

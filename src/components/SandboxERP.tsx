@@ -8,7 +8,7 @@ import { IncidentItem, INITIAL_INCIDENTS } from '@/utils/incidentData';
 import { CheckCircle, Clock, Play, RotateCcw, Building2, Server, ShieldAlert, Cpu } from 'lucide-react';
 
 export const SandboxERP: React.FC = () => {
-  const { recordScreenEvent, scenario, switchScenario } = useApprentice();
+  const { recordScreenEvent, scenario, switchScenario, submitExpertAnswer } = useApprentice();
   
   // AP State
   const [invoices, setInvoices] = useState<InvoiceItem[]>(INITIAL_INVOICES);
@@ -90,32 +90,25 @@ export const SandboxERP: React.FC = () => {
   const [isRunningDemo, setIsRunningDemo] = useState(false);
   const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  // Quick Demo Runs (Sequential & unhurried so audio completes cleanly)
+  // Quick Demo Runs (Completes a single full interaction end-to-end with zero jumping)
   const runSabineDemo = async () => {
     if (isRunningDemo) return;
     setIsRunningDemo(true);
 
     try {
-      // Step 1: Switch 4471 to Capex 0400
+      // 1. Switch Invoice 4471 to Capex 0400
       setSelectedInvoiceId('inv-4471');
-      await wait(800);
+      await wait(600);
       handleCostCenterChange('0400 • Fixed Assets (Capex)');
 
-      // Give apprentice voice time to speak question and pause
-      await wait(6500);
+      // 2. Allow apprentice question to speak cleanly and pause
+      await wait(5000);
 
-      // Step 2: Approve 4472
-      setSelectedInvoiceId('inv-4472');
-      await wait(1200);
-      handleStatusChange('approved');
-
-      // Wait before next move
-      await wait(4500);
-
-      // Step 3: Put 4473 on Hold
-      setSelectedInvoiceId('inv-4473');
-      await wait(1200);
-      handleStatusChange('held');
+      // 3. Sabine speaks her explanation and apprentice acknowledges
+      await submitExpertAnswer(
+        'Anything in equipment over five grand has to be capex for tax depreciation.',
+        true
+      );
     } finally {
       setIsRunningDemo(false);
     }
@@ -126,18 +119,19 @@ export const SandboxERP: React.FC = () => {
     setIsRunningDemo(true);
 
     try {
-      // Step 1: Failover Shard 4B
+      // 1. Failover Shard 4B
       setSelectedIncidentId('inc-8822');
-      await wait(800);
+      await wait(600);
       handleMitigationChange('Shift Ingress to Read-Replica Shard 4B');
 
-      // Allow apprentice voice question to complete cleanly
-      await wait(7000);
+      // 2. Allow apprentice question to speak cleanly and pause
+      await wait(5000);
 
-      // Step 2: Purge cache on Stripe gateway
-      setSelectedIncidentId('inc-8823');
-      await wait(1200);
-      handleMitigationChange('Purge Redis Idempotency Cache');
+      // 3. Marcus speaks his explanation and apprentice acknowledges
+      await submitExpertAnswer(
+        'Rebooting during peak traffic kills 12,000 active transactions. Shift traffic to replica 4B instead.',
+        true
+      );
     } finally {
       setIsRunningDemo(false);
     }
