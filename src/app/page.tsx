@@ -8,12 +8,14 @@ import { VoiceAgentPanel } from '@/components/VoiceAgentPanel';
 import { WorkMapViewer } from '@/components/WorkMapViewer';
 import { TeachModeView } from '@/components/TeachModeView';
 import { MoonshotModal } from '@/components/MoonshotModal';
+import { AutonomousAgentModal } from '@/components/AutonomousAgentModal';
 import { SettingsModal } from '@/components/SettingsModal';
-import { Rocket, Settings } from 'lucide-react';
+import { Rocket, Settings, Bot } from 'lucide-react';
 
 function ApprenticeDashboard() {
   const { mode } = useApprentice();
   const [isMoonshotOpen, setIsMoonshotOpen] = useState(false);
+  const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
@@ -40,13 +42,24 @@ function ApprenticeDashboard() {
       {/* Minimal Warm Footer */}
       <footer className="border-t border-white/[0.06] bg-[#0c0e12]/90 py-3.5 px-6">
         <div className="max-w-6xl mx-auto flex items-center justify-between text-xs text-slate-400">
-          <button
-            onClick={() => setIsMoonshotOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/20 transition shadow-sm"
-          >
-            <Rocket className="w-3.5 h-3.5" />
-            Pitch Slide
-          </button>
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setIsMoonshotOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/20 transition shadow-sm"
+            >
+              <Rocket className="w-3.5 h-3.5" />
+              Pitch Slide
+            </button>
+
+            <button
+              onClick={() => setIsAgentModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/20 transition shadow-sm"
+              title="Test challenge stretch goal: Export Work Map as instructions for autonomous agents"
+            >
+              <Bot className="w-3.5 h-3.5" />
+              Autonomous Agent (Gartner Fix)
+            </button>
+          </div>
 
           <button
             onClick={() => setIsSettingsOpen(true)}
@@ -58,8 +71,9 @@ function ApprenticeDashboard() {
         </div>
       </footer>
 
-      {/* Pitch Slide & Settings */}
+      {/* Modals */}
       <MoonshotModal isOpen={isMoonshotOpen} onClose={() => setIsMoonshotOpen(false)} />
+      <AutonomousAgentModal isOpen={isAgentModalOpen} onClose={() => setIsAgentModalOpen(false)} />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
