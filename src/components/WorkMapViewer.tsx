@@ -2,11 +2,11 @@
 
 import React, { useState } from 'react';
 import { useApprentice } from '@/context/ApprenticeContext';
-import { Volume2, GraduationCap, ChevronRight, Download, BookOpen } from 'lucide-react';
+import { Volume2, GraduationCap, ChevronRight, Download, BookOpen, Building2, Server } from 'lucide-react';
 import { speakText } from '@/utils/elevenlabs';
 
 export const WorkMapViewer: React.FC = () => {
-  const { workMap, debriefQuestions, setMode } = useApprentice();
+  const { workMap, debriefQuestions, setMode, scenario, switchScenario } = useApprentice();
   const [selectedStepId, setSelectedStepId] = useState<string>(
     workMap?.steps[0]?.id || 'step-1'
   );
@@ -30,22 +30,33 @@ export const WorkMapViewer: React.FC = () => {
       encodeURIComponent(JSON.stringify(workMap, null, 2));
     const a = document.createElement('a');
     a.href = dataStr;
-    a.download = `playbook.json`;
+    a.download = `playbook-${scenario}.json`;
     a.click();
   };
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
+      {/* Top Banner with Scenario Selector */}
       <div className="bg-[#131720] border border-white/[0.08] rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg shadow-black/20">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
             <BookOpen className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-white tracking-tight">{workMap.title}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-white tracking-tight">{workMap.title}</h2>
+              {/* Scenario Selector Dropdown directly on Playbook */}
+              <select
+                value={scenario}
+                onChange={(e) => switchScenario(e.target.value as any)}
+                className="bg-[#1a202c] border border-white/[0.1] rounded-lg px-2 py-0.5 text-[11px] text-amber-300 font-semibold focus:outline-none focus:border-amber-500/60 transition cursor-pointer"
+              >
+                <option value="ap">Sabine Weber (Accounts Payable)</option>
+                <option value="incident">Marcus Vance (IT Incident Escalation)</option>
+              </select>
+            </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Captured from <span className="text-amber-400 font-medium">{workMap.expertName}</span>
+              Captured from <span className="text-amber-400 font-medium">{workMap.expertName}</span> ({workMap.expertRole})
             </p>
           </div>
         </div>
@@ -86,19 +97,25 @@ export const WorkMapViewer: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
         {(debriefQuestions.length > 0 ? debriefQuestions : [
           {
-            topic: 'Vendor Scope',
+            topic: scenario === 'incident' ? 'Reboot Policy' : 'Vendor Scope',
             question:
-              'You froze Delta Logistik for December. Is that strictly for Delta, or do you hold every carrier at year-end?',
+              scenario === 'incident'
+                ? 'Under what exact threshold would you authorize a primary DB reboot instead of replica failover?'
+                : 'You froze Delta Logistik for December. Is that strictly for Delta, or do you hold every carrier at year-end?',
           },
           {
-            topic: 'Missing Asset Tag',
+            topic: scenario === 'incident' ? 'Lag Guardrail' : 'Missing Asset Tag',
             question:
-              'If equipment is €7,200 without an asset tag, do you book to 0400 anyway, or leave it in opex while waiting?',
+              scenario === 'incident'
+                ? 'If replica lag exceeds 5 seconds, do you still shift traffic or let connections queue up?'
+                : 'If equipment is €7,200 without an asset tag, do you book to 0400 anyway, or leave it in opex while waiting?',
           },
           {
-            topic: 'Sign-off',
+            topic: scenario === 'incident' ? 'Post-Mortem' : 'Sign-off',
             question:
-              'Who actually decides when to release a held freight invoice — you, logistics, or the plant controller?',
+              scenario === 'incident'
+                ? 'Who is paged for incident approval if the primary cluster fails to elect a new leader?'
+                : 'Who actually decides when to release a held freight invoice — you, logistics, or the plant controller?',
           },
         ]).map((dq, idx) => (
           <div key={idx} className="p-4 rounded-xl bg-[#131720] border border-white/[0.06] space-y-1.5 shadow-sm">
@@ -147,7 +164,7 @@ export const WorkMapViewer: React.FC = () => {
 
           <div className="space-y-1.5">
             <span className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-              What she did
+              What expert did
             </span>
             <p className="text-xs text-slate-200 bg-[#0c0e12] p-3.5 rounded-xl border border-white/[0.06] leading-relaxed">
               {selectedStep.decision}
@@ -156,7 +173,7 @@ export const WorkMapViewer: React.FC = () => {
 
           <div className="space-y-1.5">
             <span className="text-[11px] uppercase tracking-wider text-amber-400 font-semibold">
-              Why she did it
+              Why expert did it
             </span>
             <p className="text-xs text-amber-100 italic bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl leading-relaxed">
               {selectedStep.reason}
@@ -165,7 +182,7 @@ export const WorkMapViewer: React.FC = () => {
 
           <div className="space-y-2">
             <span className="text-[11px] uppercase tracking-wider text-slate-300 font-semibold">
-              Rules of thumb
+              Rules of thumb &amp; Guardrails
             </span>
             <div className="space-y-2">
               {selectedStep.guardrails.map((g, idx) => (

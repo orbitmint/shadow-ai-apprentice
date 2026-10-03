@@ -16,6 +16,8 @@ export const Header: React.FC = () => {
   const {
     mode,
     setMode,
+    scenario,
+    switchScenario,
     isOffRecord,
     toggleOffRecord,
     agentStatus,
@@ -26,7 +28,7 @@ export const Header: React.FC = () => {
   return (
     <header className="border-b border-white/[0.06] bg-[#0c0e12]/80 backdrop-blur-xl sticky top-0 z-50 px-6 py-3.5 transition-all">
       <div className="max-w-6xl mx-auto flex items-center justify-between">
-        {/* Brand */}
+        {/* Brand & Subtitle */}
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-md shadow-amber-500/20 ring-1 ring-white/20">
             <Sparkles className="w-4 h-4" />
@@ -38,46 +40,60 @@ export const Header: React.FC = () => {
                 ElevenLabs
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">Learning Sabine&rsquo;s craft</p>
+            <p className="text-[11px] text-slate-400">
+              Learning {scenario === 'incident' ? "Marcus Vance's" : "Sabine Weber's"} craft
+            </p>
           </div>
         </div>
 
-        {/* Friendly Mode Tabs */}
-        <nav className="flex items-center bg-[#151921] border border-white/[0.08] rounded-xl p-1 shadow-inner">
-          <button
-            onClick={() => setMode('capture')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              mode === 'capture'
-                ? 'bg-[#222834] text-white shadow-sm ring-1 ring-white/10'
-                : 'text-slate-400 hover:text-white'
-            }`}
+        {/* Global Scenario Selector & Mode Tabs */}
+        <div className="flex items-center gap-3">
+          <select
+            value={scenario}
+            onChange={(e) => switchScenario(e.target.value as any)}
+            className="bg-[#151921] border border-white/[0.08] rounded-xl px-2.5 py-1.5 text-xs text-amber-300 font-semibold focus:outline-none focus:border-amber-500/60 transition cursor-pointer shadow-inner"
+            title="Switch workflow scenario globally"
           >
-            <Eye className="w-3.5 h-3.5 text-amber-400" />
-            Capture
-          </button>
-          <button
-            onClick={() => setMode('map')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              mode === 'map'
-                ? 'bg-[#222834] text-white shadow-sm ring-1 ring-white/10'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Map className="w-3.5 h-3.5 text-indigo-400" />
-            Playbook
-          </button>
-          <button
-            onClick={() => setMode('teach')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              mode === 'teach'
-                ? 'bg-[#222834] text-white shadow-sm ring-1 ring-white/10'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
-            Train Rook
-          </button>
-        </nav>
+            <option value="ap">🏢 Accounts Payable (Sabine)</option>
+            <option value="incident">⚡ IT Incidents (Marcus)</option>
+          </select>
+
+          <nav className="flex items-center bg-[#151921] border border-white/[0.08] rounded-xl p-1 shadow-inner">
+            <button
+              onClick={() => setMode('capture')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                mode === 'capture'
+                  ? 'bg-[#222834] text-white shadow-sm ring-1 ring-white/10'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5 text-amber-400" />
+              Capture
+            </button>
+            <button
+              onClick={() => setMode('map')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                mode === 'map'
+                  ? 'bg-[#222834] text-white shadow-sm ring-1 ring-white/10'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Map className="w-3.5 h-3.5 text-indigo-400" />
+              Playbook
+            </button>
+            <button
+              onClick={() => setMode('teach')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                mode === 'teach'
+                  ? 'bg-[#222834] text-white shadow-sm ring-1 ring-white/10'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
+              Train Rook
+            </button>
+          </nav>
+        </div>
 
         {/* Right Actions */}
         <div className="flex items-center gap-2.5">
@@ -115,7 +131,7 @@ export const Header: React.FC = () => {
             <button
               onClick={startDebrief}
               disabled={isDebriefing}
-              className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shadow-md shadow-emerald-900/30 disabled:opacity-50"
+              className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shadow-md shadow-emerald-950/40 disabled:opacity-50"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               {isDebriefing ? 'Reviewing...' : 'Done & Debrief'}
