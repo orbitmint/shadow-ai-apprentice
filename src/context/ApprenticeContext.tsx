@@ -14,13 +14,24 @@ import {
   INITIAL_DIALOGUE_HISTORY,
   TEACH_MODE_INVOICE,
 } from '@/utils/mockData';
+import {
+  IncidentItem,
+  INITIAL_INCIDENTS,
+  INCIDENT_WORK_MAP,
+  INCIDENT_DIALOGUE_HISTORY,
+  TEACH_MODE_INCIDENT,
+} from '@/utils/incidentData';
 import { speakText, stopSpeaking } from '@/utils/elevenlabs';
 
 type AppMode = 'capture' | 'map' | 'teach';
+export type WorkflowScenario = 'ap' | 'incident';
 
 interface ApprenticeContextType {
   mode: AppMode;
   setMode: (mode: AppMode) => void;
+  // Scenario Switcher
+  scenario: WorkflowScenario;
+  switchScenario: (sc: WorkflowScenario) => void;
   // Capture State
   isCapturing: boolean;
   startCapture: () => Promise<void>;
@@ -48,9 +59,12 @@ interface ApprenticeContextType {
   debriefQuestions: any[];
   startDebrief: () => Promise<void>;
   confirmWorkMap: () => void;
-  // Teach Mode
+  // Teach Mode (AP)
   teachInvoice: InvoiceItem;
   updateTeachInvoice: (updates: Partial<InvoiceItem>) => void;
+  // Teach Mode (Incident)
+  teachIncident: IncidentItem;
+  updateTeachIncident: (updates: Partial<IncidentItem>) => void;
   tutorFeedback: { message: string; type: 'warning' | 'success' | 'info'; momentReplay?: string } | null;
   resetTeachMode: () => void;
   masteryScorecard: { capexThreshold: boolean; assetTagCheck: boolean; decemberVendorCheck: boolean };
@@ -60,6 +74,7 @@ const ApprenticeContext = createContext<ApprenticeContextType | null>(null);
 
 export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [mode, setMode] = useState<AppMode>('capture');
+  const [scenario, setScenario] = useState<WorkflowScenario>('ap');
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
   const [isOffRecord, setIsOffRecord] = useState<boolean>(false);
   const [piiShieldEnabled, setPiiShieldEnabled] = useState<boolean>(true);
@@ -78,6 +93,7 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Teach Mode State
   const [teachInvoice, setTeachInvoice] = useState<InvoiceItem>(TEACH_MODE_INVOICE);
+  const [teachIncident, setTeachIncident] = useState<IncidentItem>(TEACH_MODE_INCIDENT);
   const [tutorFeedback, setTutorFeedback] = useState<{
     message: string;
     type: 'warning' | 'success' | 'info';
@@ -88,6 +104,30 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     assetTagCheck: false,
     decemberVendorCheck: false,
   });
+
+  const switchScenario = (sc: WorkflowScenario) => {
+    setScenario(sc);
+    setTutorFeedback(null);
+    if (sc === 'incident') {
+      setDialogue(INCIDENT_DIALOGUE_HISTORY);
+      setWorkMap(INCIDENT_WORK_MAP);
+      setMasteryScorecard({
+        capexThreshold: false,
+        assetTagCheck: false,
+        decemberVendorCheck: false,
+      });
+      speakText("Switched to IT Incident Escalation scenario. Observing Marcus Vance on SRE production triage.");
+    } else {
+      setDialogue(INITIAL_DIALOGUE_HISTORY);
+      setWorkMap(INITIAL_WORK_MAP);
+      setMasteryScorecard({
+        capexThreshold: false,
+        assetTagCheck: false,
+        decemberVendorCheck: false,
+      });
+      speakText("Switched to Accounts Payable scenario. Observing Sabine Weber on invoice triage.");
+    }
+  };
 
   // Screen Capture Logic
   const startCapture = async () => {
@@ -110,7 +150,9 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setAgentStatus('listening');
 
       // Introduction voice prompt
-      const intro = "Watching over your shoulder Sabine. I'll jump in only if I see something interesting.";
+      const intro = scenario === 'incident' 
+        ? "Watching over your shoulder Marcus. I'll jump in only if I see a critical escalation point."
+        : "Watching over your shoulder Sabine. I'll jump in only if I see something interesting.";
       askAgentQuestion(intro, 'Session Started', false);
     } catch (err) {
       console.warn('Screen share cancelled or not allowed:', err);
@@ -171,6 +213,7 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const newTurn: DialogueTurn = {
       id: `q-${Date.now()}`,
       speaker: 'agent',
+      persona: 'apprentice',
       text: question,
       timestamp: new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' }),
       isGuardrail,
@@ -180,6 +223,7 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setDialogue((prev) => [...prev, newTurn]);
 
     await speakText(question, {
+      persona: 'apprentice',
       onEnd: () => {
         setAgentStatus('listening');
       },
@@ -190,6 +234,7 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const expertTurn: DialogueTurn = {
       id: `a-${Date.now()}`,
       speaker: 'expert',
+      persona: 'sabine',
       text: answer,
       timestamp: new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' }),
     };
@@ -241,13 +286,14 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setAgentStatus('analyzing');
 
     try {
+      const expertName = scenario === 'incident' ? 'Marcus Vance' : 'Sabine Weber';
       const res = await fetch('/api/debrief/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           events,
           transcript: dialogue,
-          expertName: 'Sabine Weber',
+          expertName,
         }),
       });
 
@@ -260,7 +306,7 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setMode('map');
       setAgentStatus('speaking');
 
-      const teachBack = `Alright Sabine, let me run through this to make sure I got it straight: ${data.teachBackSummary}`;
+      const teachBack = `Alright, let me run through this to make sure I got it straight: ${data.teachBackSummary}`;
       speakText(teachBack, {
         onEnd: () => {
           setAgentStatus('listening');
@@ -284,7 +330,7 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     speakText(praise);
   };
 
-  // Teach Mode Interception Logic
+  // Teach Mode Interception Logic (AP)
   const updateTeachInvoice = (updates: Partial<InvoiceItem>) => {
     const updated = { ...teachInvoice, ...updates };
     setTeachInvoice(updated);
@@ -348,8 +394,51 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
+  // Teach Mode Interception Logic (Incident Escalation)
+  const updateTeachIncident = (updates: Partial<IncidentItem>) => {
+    const updated = { ...teachIncident, ...updates };
+    setTeachIncident(updated);
+
+    // Guardrail Check: Rebooting Primary DB during peak hours
+    if (updates.currentAction === 'Reboot Primary DB Node') {
+      const warning =
+        "Hold up, Rook! Marcus would never reboot the primary DB during 2 PM peak hours on a Tier 1 customer. It drops 12,000 active transactions and triggers $50,000 SLA penalties. Failover to Read-Replica Shard 4B instead!";
+      setTutorFeedback({
+        message: warning,
+        type: 'warning',
+        momentReplay: 'Marcus Vance at 01:20: Shifted traffic to replica Shard 4B because peak hour reboot drops active sessions.',
+      });
+      speakText(warning);
+      return;
+    }
+
+    if (updates.currentAction === 'Failover to Read-Replica Shard 4B') {
+      const praise =
+        "Spot on, Rook! Marcus's rule: connection pool over 85% on Tier 1 customers requires instant failover to replica. Dropped zero active users.";
+      setTutorFeedback({
+        message: praise,
+        type: 'success',
+        momentReplay: undefined,
+      });
+      setMasteryScorecard((prev) => ({ ...prev, capexThreshold: true }));
+      speakText(praise);
+      return;
+    }
+
+    if (updates.status === 'mitigated' && updated.currentAction === 'Failover to Read-Replica Shard 4B') {
+      const success = "Clean mitigation! Incident INC-8830 resolved with zero customer downtime.";
+      setTutorFeedback({
+        message: success,
+        type: 'success',
+      });
+      setMasteryScorecard((prev) => ({ ...prev, assetTagCheck: true }));
+      speakText(success);
+    }
+  };
+
   const resetTeachMode = () => {
     setTeachInvoice(TEACH_MODE_INVOICE);
+    setTeachIncident(TEACH_MODE_INCIDENT);
     setTutorFeedback(null);
     setMasteryScorecard({
       capexThreshold: false,
@@ -363,6 +452,8 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       value={{
         mode,
         setMode,
+        scenario,
+        switchScenario,
         isCapturing,
         startCapture,
         stopCapture,
@@ -387,6 +478,8 @@ export const ApprenticeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         confirmWorkMap,
         teachInvoice,
         updateTeachInvoice,
+        teachIncident,
+        updateTeachIncident,
         tutorFeedback,
         resetTeachMode,
         masteryScorecard,

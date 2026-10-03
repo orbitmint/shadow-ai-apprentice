@@ -2,15 +2,18 @@
 
 import React, { useState } from 'react';
 import { useApprentice } from '@/context/ApprenticeContext';
-import { AlertOctagon, CheckCircle2, RefreshCw, GraduationCap, Sparkles, Volume2, Play, MousePointer2 } from 'lucide-react';
+import { AlertOctagon, CheckCircle2, RefreshCw, GraduationCap, Sparkles, Volume2, MousePointer2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { GhostCursor } from './GhostCursor';
 import { speakText } from '@/utils/elevenlabs';
 
 export const TeachModeView: React.FC = () => {
   const {
+    scenario,
     teachInvoice,
     updateTeachInvoice,
+    teachIncident,
+    updateTeachIncident,
     tutorFeedback,
     resetTeachMode,
     masteryScorecard,
@@ -20,35 +23,63 @@ export const TeachModeView: React.FC = () => {
   const [isPlayingSabine, setIsPlayingSabine] = useState(false);
   const [lang, setLang] = useState<'en' | 'de'>('en');
 
+  // AP Handlers
   const handleCostCenterSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     updateTeachInvoice({ currentCostCenter: e.target.value });
   };
 
-  const handleApprove = () => {
+  const handleApproveInvoice = () => {
     updateTeachInvoice({ status: 'approved' });
     if (teachInvoice.currentCostCenter.includes('0400')) {
       confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
     }
   };
 
+  // Incident Handlers
+  const handleMitigationSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    updateTeachIncident({ currentAction: e.target.value });
+  };
+
+  const handleMitigateIncident = () => {
+    updateTeachIncident({ status: 'mitigated' });
+    if (teachIncident.currentAction.includes('Replica')) {
+      confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+    }
+  };
+
+  // Trigger test actions
   const triggerWrongDecision = () => {
-    updateTeachInvoice({ currentCostCenter: '4711 • Workshop Operations (Opex)' });
     setIsGhostActive(true);
+    if (scenario === 'incident') {
+      updateTeachIncident({ currentAction: 'Reboot Primary DB Node' });
+    } else {
+      updateTeachInvoice({ currentCostCenter: '4711 • Workshop Operations (Opex)' });
+    }
   };
 
   const triggerCorrectDecision = () => {
-    updateTeachInvoice({
-      currentCostCenter: '0400 • Fixed Assets (Capex)',
-      assetNumber: 'AST-8820-ST',
-    });
+    if (scenario === 'incident') {
+      updateTeachIncident({ currentAction: 'Failover to Read-Replica Shard 4B' });
+    } else {
+      updateTeachInvoice({
+        currentCostCenter: '0400 • Fixed Assets (Capex)',
+        assetNumber: 'AST-8820-ST',
+      });
+    }
   };
 
-  const playSabineVoice = () => {
+  const playExpertVoice = () => {
     setIsPlayingSabine(true);
-    const quote =
-      lang === 'de'
-        ? 'Alles über fünftausend Euro bei Ausrüstung muss steuerlich aktiviert werden. Wenn wir das in 4711 lassen, sieht die Werkstattmarge katastrophal aus.'
-        : 'Anything over five grand for equipment has to be capex for tax depreciation. If you leave it in 4711, plant margins look awful and accounting will chase us down.';
+    let quote = '';
+    if (scenario === 'incident') {
+      quote =
+        "Rebooting the primary on a Tier 1 customer during 2 PM peak traffic kills 12,000 active transactions. Shift traffic to replica 4B first.";
+    } else {
+      quote =
+        lang === 'de'
+          ? 'Alles über fünftausend Euro bei Ausrüstung muss steuerlich aktiviert werden. Wenn wir das in 4711 lassen, sieht die Werkstattmarge katastrophal aus.'
+          : 'Anything over five grand for equipment has to be capex for tax depreciation. If you leave it in 4711, plant margins look awful and accounting will chase us down.';
+    }
 
     speakText(quote, {
       persona: 'sabine',
@@ -67,44 +98,46 @@ export const TeachModeView: React.FC = () => {
           <div>
             <h2 className="text-base font-bold text-white tracking-tight">Hands-on Practice</h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Trainee: <span className="text-emerald-400 font-medium">Rook</span> • Following Sabine&rsquo;s playbook
+              Trainee: <span className="text-emerald-400 font-medium">Rook</span> • Following {scenario === 'incident' ? "Marcus Vance's" : "Sabine Weber's"} playbook
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Language Toggle (Stretch Goal: German / English transfer) */}
-          <div className="flex items-center bg-[#1a202c] border border-white/[0.08] rounded-xl p-0.5 text-[11px] font-medium">
-            <button
-              onClick={() => setLang('en')}
-              className={`px-2.5 py-1 rounded-lg transition ${
-                lang === 'en' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              🇬🇧 EN
-            </button>
-            <button
-              onClick={() => setLang('de')}
-              className={`px-2.5 py-1 rounded-lg transition ${
-                lang === 'de' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
-              }`}
-              title="Page 5 Stretch Goal: Sabine explains in German, tutor teaches in English"
-            >
-              🇩🇪 DE
-            </button>
-          </div>
+          {/* Language Toggle (Only for Sabine AP) */}
+          {scenario === 'ap' && (
+            <div className="flex items-center bg-[#1a202c] border border-white/[0.08] rounded-xl p-0.5 text-[11px] font-medium">
+              <button
+                onClick={() => setLang('en')}
+                className={`px-2.5 py-1 rounded-lg transition ${
+                  lang === 'en' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🇬🇧 EN
+              </button>
+              <button
+                onClick={() => setLang('de')}
+                className={`px-2.5 py-1 rounded-lg transition ${
+                  lang === 'de' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
+                }`}
+                title="Page 5 Stretch Goal: Sabine explains in German, tutor teaches in English"
+              >
+                🇩🇪 DE
+              </button>
+            </div>
+          )}
 
           <button
             onClick={triggerWrongDecision}
             className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-950/50 hover:bg-rose-900/50 text-rose-300 border border-rose-800/60 transition shadow-sm"
           >
-            Pick Opex (Mistake)
+            {scenario === 'incident' ? 'Reboot Primary (Mistake)' : 'Pick Opex (Mistake)'}
           </button>
           <button
             onClick={triggerCorrectDecision}
             className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-950/50 hover:bg-emerald-900/50 text-emerald-300 border border-emerald-800/60 transition shadow-sm"
           >
-            Pick Capex (Right)
+            {scenario === 'incident' ? 'Failover Replica (Right)' : 'Pick Capex (Right)'}
           </button>
           <button
             onClick={resetTeachMode}
@@ -118,65 +151,119 @@ export const TeachModeView: React.FC = () => {
 
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 relative">
-        {/* Left: Fresh Invoice Case */}
+        {/* Left: Fresh Unseen Case (Either AP or Incident) */}
         <div className="md:col-span-7 bg-[#131720] border border-white/[0.08] rounded-2xl p-6 flex flex-col justify-between h-[460px] shadow-lg shadow-black/20 relative overflow-hidden">
-          {/* Animated Ghost Cursor Overlay */}
           <GhostCursor isActive={isGhostActive} onComplete={() => setIsGhostActive(false)} />
 
-          <div className="space-y-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-semibold">
-                  {teachInvoice.invoiceNumber}
-                </span>
-                <h3 className="text-base font-bold text-white mt-0.5 tracking-tight">{teachInvoice.vendor}</h3>
-                <span className="text-xs text-slate-400">{teachInvoice.vendorCategory}</span>
-              </div>
-              <span className="text-2xl font-mono font-bold text-amber-400">
-                €{teachInvoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-300 leading-relaxed bg-[#0c0e12] p-4 rounded-xl border border-white/[0.06]">
-              {teachInvoice.description}
-            </p>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs text-slate-300 font-medium">
-                <span>Select Cost Center</span>
-                {isGhostActive && (
-                  <span className="text-amber-400 font-mono text-[11px] animate-pulse">
-                    Sabine points here
+          {scenario === 'ap' ? (
+            /* AP Case */
+            <div className="space-y-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-semibold">
+                    {teachInvoice.invoiceNumber}
                   </span>
-                )}
+                  <h3 className="text-base font-bold text-white mt-0.5 tracking-tight">{teachInvoice.vendor}</h3>
+                  <span className="text-xs text-slate-400">{teachInvoice.vendorCategory}</span>
+                </div>
+                <span className="text-2xl font-mono font-bold text-amber-400">
+                  €{teachInvoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
               </div>
-              <select
-                value={teachInvoice.currentCostCenter}
-                onChange={handleCostCenterSelect}
-                className={`w-full bg-[#0c0e12] border rounded-xl px-3.5 py-2.5 text-xs text-slate-100 font-mono transition ${
-                  isGhostActive ? 'border-amber-400 ring-2 ring-amber-400/30' : 'border-white/[0.1] focus:border-amber-500/80'
-                }`}
-              >
-                <option value="4711 • Workshop Operations (Opex)">
-                  4711 • Workshop Operations (Opex)
-                </option>
-                <option value="0400 • Fixed Assets (Capex)">
-                  0400 • Fixed Assets (Capex)
-                </option>
-                <option value="5200 • Freight & Shipping">
-                  5200 • Freight & Shipping
-                </option>
-              </select>
+
+              <p className="text-xs text-slate-300 leading-relaxed bg-[#0c0e12] p-4 rounded-xl border border-white/[0.06]">
+                {teachInvoice.description}
+              </p>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-slate-300 font-medium">
+                  <span>Select Cost Center</span>
+                  {isGhostActive && (
+                    <span className="text-amber-400 font-mono text-[11px] animate-pulse">
+                      Sabine points here
+                    </span>
+                  )}
+                </div>
+                <select
+                  value={teachInvoice.currentCostCenter}
+                  onChange={handleCostCenterSelect}
+                  className={`w-full bg-[#0c0e12] border rounded-xl px-3.5 py-2.5 text-xs text-slate-100 font-mono transition ${
+                    isGhostActive ? 'border-amber-400 ring-2 ring-amber-400/30' : 'border-white/[0.1] focus:border-amber-500/80'
+                  }`}
+                >
+                  <option value="4711 • Workshop Operations (Opex)">
+                    4711 • Workshop Operations (Opex)
+                  </option>
+                  <option value="0400 • Fixed Assets (Capex)">
+                    0400 • Fixed Assets (Capex)
+                  </option>
+                  <option value="5200 • Freight & Shipping">
+                    5200 • Freight & Shipping
+                  </option>
+                </select>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Incident Case */
+            <div className="space-y-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-[10px] font-mono text-purple-400 uppercase tracking-wider font-semibold">
+                    {teachIncident.incidentNumber} • {teachIncident.service}
+                  </span>
+                  <h3 className="text-base font-bold text-white mt-0.5 tracking-tight">{teachIncident.customerTier}</h3>
+                  <span className="text-xs text-rose-400 font-semibold">{teachIncident.severity}</span>
+                </div>
+                <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">
+                  {teachIncident.timestamp}
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed bg-[#0c0e12] p-4 rounded-xl border border-white/[0.06]">
+                {teachIncident.summary}
+              </p>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-slate-300 font-medium">
+                  <span>Triage Decision (Peak Traffic Window)</span>
+                  {isGhostActive && (
+                    <span className="text-amber-400 font-mono text-[11px] animate-pulse">
+                      Marcus points here
+                    </span>
+                  )}
+                </div>
+                <select
+                  value={teachIncident.currentAction}
+                  onChange={handleMitigationSelect}
+                  className={`w-full bg-[#0c0e12] border rounded-xl px-3.5 py-2.5 text-xs text-slate-100 font-mono transition ${
+                    isGhostActive ? 'border-purple-400 ring-2 ring-purple-400/30' : 'border-white/[0.1] focus:border-purple-500/80'
+                  }`}
+                >
+                  <option value="Pending Triage">Pending Triage</option>
+                  <option value="Reboot Primary DB Node">Reboot Primary DB Node</option>
+                  <option value="Failover to Read-Replica Shard 4B">Failover to Read-Replica Shard 4B</option>
+                  <option value="Purge Redis Idempotency Cache">Purge Redis Idempotency Cache</option>
+                </select>
+              </div>
+            </div>
+          )}
 
           <div className="pt-4 border-t border-white/[0.06]">
-            <button
-              onClick={handleApprove}
-              className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-950/40 transition active:scale-[0.99]"
-            >
-              Approve invoice
-            </button>
+            {scenario === 'ap' ? (
+              <button
+                onClick={handleApproveInvoice}
+                className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-950/40 transition active:scale-[0.99]"
+              >
+                Approve invoice
+              </button>
+            ) : (
+              <button
+                onClick={handleMitigateIncident}
+                className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-purple-950/40 transition active:scale-[0.99]"
+              >
+                Mitigate &amp; Route Traffic
+              </button>
+            )}
           </div>
         </div>
 
@@ -191,7 +278,7 @@ export const TeachModeView: React.FC = () => {
               <button
                 onClick={() => setIsGhostActive(true)}
                 className="text-[11px] font-medium text-amber-400 hover:text-amber-300 flex items-center gap-1 transition"
-                title="Ghost Replay: Animate Sabine's mouse movement"
+                title="Ghost Replay: Animate expert's mouse movement"
               >
                 <MousePointer2 className="w-3 h-3" />
                 Ghost Replay
@@ -225,10 +312,9 @@ export const TeachModeView: React.FC = () => {
                 {tutorFeedback.momentReplay && (
                   <div className="pt-2.5 border-t border-rose-500/20 text-[11px] space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-amber-400 font-semibold">How Sabine handled it:</span>
-                      {/* Dual-Voice Button */}
+                      <span className="text-amber-400 font-semibold">How expert handled it:</span>
                       <button
-                        onClick={playSabineVoice}
+                        onClick={playExpertVoice}
                         className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 ${
                           isPlayingSabine
                             ? 'bg-amber-500 text-slate-950 border-amber-400 animate-pulse'
@@ -236,12 +322,12 @@ export const TeachModeView: React.FC = () => {
                         }`}
                       >
                         <Volume2 className="w-3 h-3" />
-                        {isPlayingSabine ? 'Sabine Speaking...' : 'Hear Sabine’s Voice'}
+                        {isPlayingSabine ? 'Expert Speaking...' : "Hear Expert's Voice"}
                       </button>
                     </div>
 
                     <div className="p-2.5 rounded-lg bg-[#0c0e12]/80 border border-white/[0.06] font-mono text-slate-300">
-                      {lang === 'de' ? (
+                      {lang === 'de' && scenario === 'ap' ? (
                         <span>
                           🇩🇪 <em>&ldquo;Alles über 5.000 € bei Ausrüstung muss aktiviert werden.&rdquo;</em>
                         </span>
@@ -254,7 +340,9 @@ export const TeachModeView: React.FC = () => {
               </div>
             ) : (
               <p className="text-xs text-slate-400 leading-relaxed bg-[#0c0e12]/60 p-3.5 rounded-xl border border-white/[0.06]">
-                Tutor is watching Rook&rsquo;s screen. If Rook tries to book €6,850 to workshop opex, the tutor jumps in before anything gets saved.
+                {scenario === 'incident'
+                  ? "Tutor is watching Rook. If Rook tries to reboot the primary DB during peak traffic, the tutor jumps in before downtime occurs."
+                  : "Tutor is watching Rook's screen. If Rook tries to book €6,850 to workshop opex, the tutor jumps in before anything gets saved."}
               </p>
             )}
           </div>
@@ -265,7 +353,9 @@ export const TeachModeView: React.FC = () => {
               Rook&rsquo;s progress checklist
             </span>
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0c0e12] border border-white/[0.06]">
-              <span className="text-slate-200">5k Capex cutoff</span>
+              <span className="text-slate-200">
+                {scenario === 'incident' ? 'Peak hour reboot guardrail' : '5k Capex cutoff'}
+              </span>
               <span
                 className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                   masteryScorecard.capexThreshold
@@ -277,7 +367,9 @@ export const TeachModeView: React.FC = () => {
               </span>
             </div>
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0c0e12] border border-white/[0.06]">
-              <span className="text-slate-200">Asset tag verification</span>
+              <span className="text-slate-200">
+                {scenario === 'incident' ? 'Replica failover validation' : 'Asset tag verification'}
+              </span>
               <span
                 className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                   masteryScorecard.assetTagCheck
