@@ -1,0 +1,12 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "89cf283d3612808874df4a1b3de26169fb3a7702",
+  "prompts": {},
+  "humans": {
+    "h_be693f7d29c9d1": {
+      "author": "daniyarndh <117352341+daniyarndh@users.noreply.github.com>"
+    }
+  }
+}
