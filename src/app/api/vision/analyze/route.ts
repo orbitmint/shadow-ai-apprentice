@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callClaudeText, callClaudeVision } from '@/utils/claude';
 import { callGeminiCli, extractJsonFromCliOutput } from '@/utils/geminiCli';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export async function POST(req: NextRequest) {
   try {
     const { imageBase64, currentContext, recentEvents, customClaudeKey } = await req.json();
 
     const claudeKey = customClaudeKey || process.env.ANTHROPIC_API_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY;
 
-    // 1. Try Claude if key is provided
-    if (claudeKey && (imageBase64 || currentContext)) {
-      try {
-        const prompt = `
+    const prompt = `
 You are the Vision & Action Brain of "The AI Apprentice".
 An expert is performing actions on an Accounts Payable ERP screen.
 
@@ -39,6 +38,9 @@ Respond ONLY with valid JSON:
 }
 `;
 
+    // 1. Try Claude on Vercel
+    if (claudeKey && (imageBase64 || currentContext)) {
+      try {
         let claudeOutput = '';
         if (imageBase64) {
           claudeOutput = await callClaudeVision(prompt, imageBase64, claudeKey);
@@ -55,48 +57,47 @@ Respond ONLY with valid JSON:
       }
     }
 
-    // 2. Try Gemini CLI if context is present
+    // 2. Try Gemini API on Vercel
+    if (geminiKey && (imageBase64 || currentContext)) {
+      try {
+        const genAI = new GoogleGenerativeAI(geminiKey);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+        let content: any = [prompt];
+        if (imageBase64) {
+          const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+          content.push({
+            inlineData: {
+              data: cleanBase64,
+              mimeType: 'image/jpeg',
+            },
+          });
+        }
+
+        const result = await model.generateContent(content);
+        const parsed = extractJsonFromCliOutput(result.response.text());
+        if (parsed && parsed.action) {
+          return NextResponse.json(parsed);
+        }
+      } catch (geminiErr: any) {
+        console.warn('Gemini vision API notice:', geminiErr.message);
+      }
+    }
+
+    // 3. Try Gemini CLI if running locally
     if (currentContext || recentEvents) {
       try {
-        const prompt = `
-You are the Vision & Action Brain of "The AI Apprentice".
-An expert is performing actions on an Accounts Payable ERP screen.
-
-Recent Events:
-${JSON.stringify(recentEvents || []).slice(0, 500)}
-
-Current Context:
-${JSON.stringify(currentContext || {})}
-
-Analyze what the expert did.
-If they made a significant judgment call or unwritten rule (e.g. changing cost center on high value item, holding seasonal invoice):
-Suggest a natural spoken question the AI apprentice should ask at a pause to uncover the hidden reason or guardrail.
-
-Respond ONLY with valid JSON:
-{
-  "hasMeaningfulAction": true,
-  "action": "string",
-  "targetField": "string",
-  "oldValue": "string",
-  "newValue": "string",
-  "description": "string",
-  "isGuardrailTrigger": true,
-  "guardrailNote": "string",
-  "suggestedQuestion": "string"
-}
-`;
-
-        const cliOutput = await callGeminiCli(prompt, 8000);
+        const cliOutput = await callGeminiCli(prompt, 6000);
         const parsed = extractJsonFromCliOutput(cliOutput);
         if (parsed && parsed.action) {
           return NextResponse.json(parsed);
         }
       } catch (err: any) {
-        // Fall through to immediate contextual response
+        // Local CLI not present on Vercel lambda - proceed to fast contextual response
       }
     }
 
-    // 3. Fast contextual response (ideal for real-time 1.2s pause timing)
+    // 4. Fast contextual response (guaranteed 0ms latency on Vercel)
     if (currentContext && currentContext.lastAction) {
       const { action, field, oldValue, newValue, invoiceNumber, amount } = currentContext.lastAction;
       const isCapex = newValue?.includes('0400') || (amount && amount > 5000);
@@ -108,14 +109,14 @@ Respond ONLY with valid JSON:
 
       if (isCapex) {
         isGuardrailTrigger = true;
-        guardrailNote = 'Capex capitalization threshold (€5,000 rule)';
-        suggestedQuestion = 'I noticed you just switched this invoice to 0400 CAPEX. What made you do that?';
+        guardrailNote = '5k capex cutoff rule';
+        suggestedQuestion = "Quick question Sabine — why'd you flip this invoice over to 0400?";
       } else if (isHold) {
         isGuardrailTrigger = true;
         guardrailNote = 'Seasonal vendor billing risk';
-        suggestedQuestion = 'You just placed that invoice on hold instead of approving it. What is the reason behind that?';
+        suggestedQuestion = "Saw you put Delta Logistik on hold instead of approving it. What's the story with them?";
       } else if (action?.includes('Approve')) {
-        suggestedQuestion = 'What checks did you verify before hitting approve on this one?';
+        suggestedQuestion = 'What did you double-check before approving this invoice?';
       }
 
       return NextResponse.json({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callClaudeText } from '@/utils/claude';
 import { callGeminiCli, extractJsonFromCliOutput } from '@/utils/geminiCli';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { INITIAL_WORK_MAP } from '@/utils/mockData';
 
 export async function POST(req: NextRequest) {
@@ -56,7 +57,7 @@ Return your response ONLY in valid JSON matching this structure:
 }
 `;
 
-    // 1. Try Claude if ANTHROPIC_API_KEY or custom key is available
+    // 1. Try Claude if ANTHROPIC_API_KEY is configured on Vercel
     const claudeKey = customClaudeKey || process.env.ANTHROPIC_API_KEY;
     if (claudeKey) {
       try {
@@ -70,7 +71,24 @@ Return your response ONLY in valid JSON matching this structure:
       }
     }
 
-    // 2. Try Gemini CLI directly (authenticated on local machine)
+    // 2. Try Gemini API Key if GEMINI_API_KEY is configured on Vercel
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (geminiKey) {
+      try {
+        const genAI = new GoogleGenerativeAI(geminiKey);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const result = await model.generateContent(prompt);
+        const text = result.response.text();
+        const parsed = extractJsonFromCliOutput(text);
+        if (parsed && parsed.debriefQuestions && parsed.workMap) {
+          return NextResponse.json(parsed);
+        }
+      } catch (geminiErr: any) {
+        console.warn('Gemini API debrief notice:', geminiErr.message);
+      }
+    }
+
+    // 3. Try Gemini CLI if running locally
     try {
       const cliOutput = await callGeminiCli(prompt);
       const parsed = extractJsonFromCliOutput(cliOutput);
@@ -78,10 +96,10 @@ Return your response ONLY in valid JSON matching this structure:
         return NextResponse.json(parsed);
       }
     } catch (cliErr: any) {
-      console.warn('Gemini CLI generation note:', cliErr.message);
+      // Local CLI not present on Vercel lambda - proceed to guaranteed fallback
     }
 
-    // 3. High fidelity fallback matching the challenge brief requirements
+    // 4. Guaranteed high-fidelity fallback matching the challenge brief requirements
     return NextResponse.json({
       debriefQuestions: [
         {
