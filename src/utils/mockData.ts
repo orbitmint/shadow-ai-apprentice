@@ -80,17 +80,25 @@ export const INITIAL_WORK_MAP: WorkMap = {
       id: 'step-1',
       stepNumber: 1,
       title: 'Check invoice total against the 5k threshold',
+      germanTitle: 'Rechnungsbetrag gegen 5.000 € Grenze prüfen',
       screenMoment: {
         timestamp: '01:14',
         uiTarget: 'Invoice header total (€7,200.00)',
         details: 'Looked at line item description: CNC spindle replacement motor.',
       },
       decision: 'Flagged for Capex 0400 re-coding.',
+      germanDecision: 'Zur Umbuchung auf Anlagevermögen (0400) markiert.',
       reason: '"Anything over five grand for equipment has to be capitalized for tax depreciation. If you leave it in 4711, plant margins look awful and accounting will chew us out at month-end."',
+      germanReason: '"Alles über fünftausend Euro bei Ausrüstung muss steuerlich aktiviert werden. Wenn wir das in 4711 lassen, sieht die Werkstattmarge katastrophal aus und die Buchhaltung steht zum Monatsabschluss auf der Matte."',
       guardrails: [
         'Equipment over €5,000 always goes to Capex 0400.',
         'Must have an asset tag (AST-...) before booking to 0400.',
         'If it is an unknown vendor or has no tag: stop and ping the controller.',
+      ],
+      germanGuardrails: [
+        'Ausrüstung über 5.000 € immer auf 0400 buchen.',
+        'Anlagennummer (AST-...) ist vor der Buchung zwingend erforderlich.',
+        'Unbekannter Lieferant oder fehlende Nummer: Halt und Rücksprache mit Controller.',
       ],
       confirmedByExpert: true,
     },
@@ -98,13 +106,16 @@ export const INITIAL_WORK_MAP: WorkMap = {
       id: 'step-2',
       stepNumber: 2,
       title: 'Switch cost center from 4711 to 0400',
+      germanTitle: 'Kostenstelle von 4711 auf 0400 umstellen',
       screenMoment: {
         timestamp: '03:12',
         uiTarget: 'Cost Center dropdown > Selected 0400',
         details: 'Changed default workshop operations code to capital assets.',
       },
       decision: 'Re-coded from opex 4711 to capex 0400 and double-checked the asset tag.',
+      germanDecision: 'Von 4711 auf 0400 umkodiert und Anlagennummer geprüft.',
       reason: '"Leaving this in 4711 screws up our plant budget comparison for the whole quarter."',
+      germanReason: '"Wenn wir das in 4711 lassen, verzerrt das den gesamten Quartalsvergleich des Werks."',
       guardrails: [
         'Double check the delivery slip matches the asset number.',
         'Capex bookings ping fixed-asset accounting automatically.',
@@ -115,13 +126,16 @@ export const INITIAL_WORK_MAP: WorkMap = {
       id: 'step-3',
       stepNumber: 3,
       title: 'Approve regular consumable deliveries',
+      germanTitle: 'Reguläre Verbrauchsmaterial-Lieferungen freigeben',
       screenMoment: {
         timestamp: '05:30',
         uiTarget: 'Würth invoice > Packing slip PDF',
         details: 'Matched the warehouse delivery slip with the open purchase order.',
       },
       decision: 'Approved under 4711 right away without escalation.',
+      germanDecision: 'Direkt unter 4711 ohne Eskalation freigegeben.',
       reason: '"Regular workshop supplies under two grand with matching delivery slips get pushed straight through."',
+      germanReason: '"Verbrauchsmaterial unter zweitausend Euro mit passendem Lieferschein geht direkt durch."',
       guardrails: [
         'Always make sure the signed slip is attached.',
         'Supplies over two grand need the shop supervisor to sign off.',
@@ -132,13 +146,16 @@ export const INITIAL_WORK_MAP: WorkMap = {
       id: 'step-4',
       stepNumber: 4,
       title: 'Freeze Delta Logistik December freight bill',
+      germanTitle: 'Delta Logistik Dezember-Frachtrechnung sperren',
       screenMoment: {
         timestamp: '07:45',
         uiTarget: 'Delta Logistik invoice > Hold button',
         details: 'Marked on hold pending year-end carrier reconciliation.',
       },
       decision: 'Froze payment until January reconciliation.',
+      germanDecision: 'Zahlung bis zum Januar-Abgleich gesperrt.',
       reason: '"Delta tries to sneak in double charges every single December for container storage. We sit on their freight bills until January so we can square the credits first."',
+      germanReason: '"Delta versucht jeden Dezember doppelte Standgelder abzurechnen. Wir stoppen deren Rechnungen grundsätzlich bis zum Januar-Abgleich."',
       guardrails: [
         'Never pay Delta freight invoices in December right off the bat.',
         'Wait for the logistics manager to sign off in January.',
@@ -155,12 +172,15 @@ export const INITIAL_WORK_MAP: WorkMap = {
   ],
   teachBackSummary:
     "Here is how Sabine handles it: Anything over 5,000 for equipment gets capitalized to 0400 with an asset tag. Regular shop supplies under 2,000 get cleared fast if the slip matches. And Delta Logistik freight in December gets frozen until January reconciliation to avoid duplicate fees.",
+  germanTeachBackSummary:
+    "Sabines Vorgehen: Ausrüstung über 5.000 € immer auf 0400 mit Anlagennummer aktivieren. Reguläre Lieferungen unter 2.000 € mit Lieferschein direkt freigeben. Delta Logistik Frachtrechnungen im Dezember grundsätzlich bis Januar sperren.",
 };
 
 export const INITIAL_DIALOGUE_HISTORY: DialogueTurn[] = [
   {
     id: 'd-1',
     speaker: 'agent',
+    persona: 'apprentice',
     text: "Quick question Sabine — why'd you flip Invoice 4471 over to 0400 instead of keeping it in 4711?",
     timestamp: '03:15',
     isGuardrail: true,
@@ -169,13 +189,16 @@ export const INITIAL_DIALOGUE_HISTORY: DialogueTurn[] = [
   {
     id: 'd-2',
     speaker: 'expert',
+    persona: 'sabine',
     text: "Anything in equipment over five grand has to be capex for tax depreciation. If we dump that in 4711, workshop margins look terrible and accounting will chase us down at month-end.",
+    germanText: "Alles über fünftausend Euro bei Ausrüstung muss steuerlich aktiviert werden. Wenn wir das in 4711 lassen, sieht die Werkstattmarge katastrophal aus und die Buchhaltung steht zum Monatsabschluss auf der Matte.",
     timestamp: '03:22',
     isGuardrail: true,
   },
   {
     id: 'd-3',
     speaker: 'agent',
+    persona: 'apprentice',
     text: "Gotcha. What's the rule if an invoice arrives without an asset tag on it?",
     timestamp: '03:30',
     isGuardrail: true,
@@ -184,13 +207,16 @@ export const INITIAL_DIALOGUE_HISTORY: DialogueTurn[] = [
   {
     id: 'd-4',
     speaker: 'expert',
+    persona: 'sabine',
     text: "Then don't touch it. If there's no asset tag or it's a vendor we don't know, stop right there and ping the plant controller.",
+    germanText: "Dann Finger weg. Wenn keine Anlagennummer draufsteht oder der Lieferant unbekannt ist: sofort stoppen und den Werkscontroller anpingen.",
     timestamp: '03:41',
     isGuardrail: true,
   },
   {
     id: 'd-5',
     speaker: 'agent',
+    persona: 'apprentice',
     text: "Saw you just put Delta Logistik on hold. What's the story with them?",
     timestamp: '07:48',
     isGuardrail: true,
@@ -199,7 +225,9 @@ export const INITIAL_DIALOGUE_HISTORY: DialogueTurn[] = [
   {
     id: 'd-6',
     speaker: 'expert',
+    persona: 'sabine',
     text: "Delta double-bills storage surcharges every December like clockwork. We freeze their freight bills until January credit reconciliation.",
+    germanText: "Delta berechnet jeden Dezember wie ein Uhrwerk doppelte Lageraufschläge. Wir frieren deren Rechnungen bis zur Januar-Gutschrift ein.",
     timestamp: '07:58',
     isGuardrail: true,
   },

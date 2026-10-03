@@ -16,7 +16,9 @@ export interface ScreenEvent {
 export interface DialogueTurn {
   id: string;
   speaker: 'agent' | 'expert' | 'tutor' | 'trainee' | 'system';
+  persona?: 'apprentice' | 'sabine';
   text: string;
+  germanText?: string;
   timestamp: string;
   audioUrl?: string;
   isGuardrail?: boolean;
@@ -27,6 +29,7 @@ export interface WorkMapStep {
   id: string;
   stepNumber: number;
   title: string;
+  germanTitle?: string;
   screenMoment: {
     timestamp: string;
     screenshotUrl?: string;
@@ -34,8 +37,11 @@ export interface WorkMapStep {
     details?: string;
   };
   decision: string;
+  germanDecision?: string;
   reason: string;
+  germanReason?: string;
   guardrails: string[];
+  germanGuardrails?: string[];
   confirmedByExpert: boolean;
 }
 
@@ -49,6 +55,7 @@ export interface WorkMap {
   steps: WorkMapStep[];
   coreGuardrails: string[];
   teachBackSummary: string;
+  germanTeachBackSummary?: string;
 }
 
 export interface InvoiceItem {
