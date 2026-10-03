@@ -2,7 +2,9 @@ let currentAudio: HTMLAudioElement | null = null;
 
 export async function speakText(
   text: string,
-  callbacks?: {
+  options?: {
+    persona?: 'apprentice' | 'sabine';
+    voiceId?: string;
     onStart?: () => void;
     onEnd?: () => void;
     onError?: (err: any) => void;
@@ -10,13 +12,17 @@ export async function speakText(
 ): Promise<void> {
   stopSpeaking();
 
-  callbacks?.onStart?.();
+  options?.onStart?.();
 
   try {
     const res = await fetch('/api/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({
+        text,
+        persona: options?.persona || 'apprentice',
+        voiceId: options?.voiceId,
+      }),
     });
 
     const contentType = res.headers.get('content-type');
@@ -29,29 +35,30 @@ export async function speakText(
       currentAudio.onended = () => {
         URL.revokeObjectURL(url);
         currentAudio = null;
-        callbacks?.onEnd?.();
+        options?.onEnd?.();
       };
 
       currentAudio.onerror = (e) => {
-        console.warn('Audio playback error, falling back to speech synthesis:', e);
-        fallbackSpeech(text, callbacks);
+        console.warn('Audio playback notice, using browser speech fallback:', e);
+        fallbackSpeech(text, options);
       };
 
       await currentAudio.play();
       return;
     }
 
-    // Otherwise use browser speech synthesis fallback
-    fallbackSpeech(text, callbacks);
+    // Fallback to browser speech synthesis
+    fallbackSpeech(text, options);
   } catch (err) {
     console.warn('TTS request error, using fallback:', err);
-    fallbackSpeech(text, callbacks);
+    fallbackSpeech(text, options);
   }
 }
 
 function fallbackSpeech(
   text: string,
-  callbacks?: {
+  options?: {
+    persona?: 'apprentice' | 'sabine';
     onStart?: () => void;
     onEnd?: () => void;
     onError?: (err: any) => void;
@@ -60,33 +67,46 @@ function fallbackSpeech(
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
 
-    // Try finding an English or expressive voice
+    // Persona pitch & rate modulation
+    if (options?.persona === 'sabine') {
+      utterance.rate = 0.92;
+      utterance.pitch = 0.9;
+    } else {
+      utterance.rate = 1.05;
+      utterance.pitch = 1.1;
+    }
+
     const voices = window.speechSynthesis.getVoices();
-    const naturalVoice =
-      voices.find((v) => v.name.includes('Natural') || v.name.includes('Samantha') || v.name.includes('Google UK English Female')) ||
-      voices.find((v) => v.lang.startsWith('en')) ||
-      voices[0];
+    const isGerman = /[äöüß]|Guten|Ausrüstung|Rechnung|immer/i.test(text);
 
-    if (naturalVoice) {
-      utterance.voice = naturalVoice;
+    if (isGerman) {
+      const deVoice = voices.find((v) => v.lang.startsWith('de'));
+      if (deVoice) utterance.voice = deVoice;
+    } else {
+      const femaleVoices = voices.filter(
+        (v) => v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Victoria')
+      );
+      if (options?.persona === 'sabine' && femaleVoices.length > 1) {
+        utterance.voice = femaleVoices[1];
+      } else if (femaleVoices[0]) {
+        utterance.voice = femaleVoices[0];
+      }
     }
 
     utterance.onend = () => {
-      callbacks?.onEnd?.();
+      options?.onEnd?.();
     };
 
     utterance.onerror = (e) => {
-      console.error('Speech synthesis error:', e);
-      callbacks?.onError?.(e);
-      callbacks?.onEnd?.();
+      console.warn('Speech synthesis notice:', e);
+      options?.onError?.(e);
+      options?.onEnd?.();
     };
 
     window.speechSynthesis.speak(utterance);
   } else {
-    callbacks?.onEnd?.();
+    options?.onEnd?.();
   }
 }
 

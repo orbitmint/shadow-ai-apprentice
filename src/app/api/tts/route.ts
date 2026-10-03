@@ -1,24 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// ElevenLabs curated voices
+const VOICES = {
+  apprentice: '21m00Tcm4TlvDq8ikWAM', // Rachel - bright, observant, curious apprentice
+  sabine: 'Xb7hH8MSUJpSbSDYk0k2',     // Alice - calm, mature, experienced 24-year controller
+};
+
 export async function POST(req: NextRequest) {
   try {
-    const { text, voiceId = '21m00Tcm4TlvDq8ikWAM' } = await req.json(); // Default to 'Rachel' (clear, calm voice)
+    const { text, persona = 'apprentice', voiceId } = await req.json();
 
     if (!text) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
 
+    const selectedVoiceId = voiceId || (persona === 'sabine' ? VOICES.sabine : VOICES.apprentice);
     const apiKey = process.env.ELEVENLABS_API_KEY;
 
     if (!apiKey) {
-      // Return 200 with fallback indicator so client can use Web Speech API
       return NextResponse.json(
-        { fallback: true, message: 'ELEVENLABS_API_KEY not configured. Falling back to local browser speech.' },
+        { fallback: true, persona, message: 'ELEVENLABS_API_KEY not configured. Falling back to browser speech.' },
         { status: 200 }
       );
     }
 
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${selectedVoiceId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -26,11 +32,11 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         text,
-        model_id: 'eleven_multilingual_v2',
+        model_id: 'eleven_multilingual_v2', // Native English + German fluency
         voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.8,
-          style: 0.35,
+          stability: persona === 'sabine' ? 0.65 : 0.45,
+          similarity_boost: 0.85,
+          style: persona === 'sabine' ? 0.2 : 0.4,
           use_speaker_boost: true,
         },
       }),
@@ -38,9 +44,9 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.warn('ElevenLabs API error:', errorText);
+      console.warn('ElevenLabs API notice:', errorText);
       return NextResponse.json(
-        { fallback: true, error: errorText },
+        { fallback: true, persona, error: errorText },
         { status: 200 }
       );
     }
