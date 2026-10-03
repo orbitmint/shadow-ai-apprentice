@@ -86,40 +86,61 @@ export const SandboxERP: React.FC = () => {
     });
   };
 
-  // Quick Demo Runs
+  // Sequential Demo Helper
+  const [isRunningDemo, setIsRunningDemo] = useState(false);
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // Quick Demo Runs (Sequential & unhurried so audio completes cleanly)
   const runSabineDemo = async () => {
-    setSelectedInvoiceId('inv-4471');
-    setTimeout(() => {
+    if (isRunningDemo) return;
+    setIsRunningDemo(true);
+
+    try {
+      // Step 1: Switch 4471 to Capex 0400
+      setSelectedInvoiceId('inv-4471');
+      await wait(800);
       handleCostCenterChange('0400 • Fixed Assets (Capex)');
-    }, 1000);
 
-    setTimeout(() => {
+      // Give apprentice voice time to speak question and pause
+      await wait(6500);
+
+      // Step 2: Approve 4472
       setSelectedInvoiceId('inv-4472');
-    }, 4500);
-    setTimeout(() => {
+      await wait(1200);
       handleStatusChange('approved');
-    }, 6000);
 
-    setTimeout(() => {
+      // Wait before next move
+      await wait(4500);
+
+      // Step 3: Put 4473 on Hold
       setSelectedInvoiceId('inv-4473');
-    }, 9000);
-    setTimeout(() => {
+      await wait(1200);
       handleStatusChange('held');
-    }, 10500);
+    } finally {
+      setIsRunningDemo(false);
+    }
   };
 
   const runMarcusDemo = async () => {
-    setSelectedIncidentId('inc-8822');
-    setTimeout(() => {
-      handleMitigationChange('Shift Ingress to Read-Replica Shard 4B');
-    }, 1000);
+    if (isRunningDemo) return;
+    setIsRunningDemo(true);
 
-    setTimeout(() => {
+    try {
+      // Step 1: Failover Shard 4B
+      setSelectedIncidentId('inc-8822');
+      await wait(800);
+      handleMitigationChange('Shift Ingress to Read-Replica Shard 4B');
+
+      // Allow apprentice voice question to complete cleanly
+      await wait(7000);
+
+      // Step 2: Purge cache on Stripe gateway
       setSelectedIncidentId('inc-8823');
-    }, 5000);
-    setTimeout(() => {
+      await wait(1200);
       handleMitigationChange('Purge Redis Idempotency Cache');
-    }, 6500);
+    } finally {
+      setIsRunningDemo(false);
+    }
   };
 
   return (

@@ -1,4 +1,5 @@
 let currentAudio: HTMLAudioElement | null = null;
+let currentResolve: (() => void) | null = null;
 
 export async function speakText(
   text: string,
@@ -12,47 +13,59 @@ export async function speakText(
 ): Promise<void> {
   stopSpeaking();
 
-  options?.onStart?.();
+  return new Promise<void>(async (resolve) => {
+    currentResolve = resolve;
 
-  try {
-    const res = await fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text,
-        persona: options?.persona || 'apprentice',
-        voiceId: options?.voiceId,
-      }),
-    });
+    const cleanup = () => {
+      options?.onEnd?.();
+      if (currentResolve) {
+        currentResolve();
+        currentResolve = null;
+      }
+    };
 
-    const contentType = res.headers.get('content-type');
+    options?.onStart?.();
 
-    if (res.ok && contentType && contentType.includes('audio/mpeg')) {
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      currentAudio = new Audio(url);
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          persona: options?.persona || 'apprentice',
+          voiceId: options?.voiceId,
+        }),
+      });
 
-      currentAudio.onended = () => {
-        URL.revokeObjectURL(url);
-        currentAudio = null;
-        options?.onEnd?.();
-      };
+      const contentType = res.headers.get('content-type');
 
-      currentAudio.onerror = (e) => {
-        console.warn('Audio playback notice, using browser speech fallback:', e);
-        fallbackSpeech(text, options);
-      };
+      if (res.ok && contentType && contentType.includes('audio/mpeg')) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        currentAudio = new Audio(url);
 
-      await currentAudio.play();
-      return;
+        currentAudio.onended = () => {
+          URL.revokeObjectURL(url);
+          currentAudio = null;
+          cleanup();
+        };
+
+        currentAudio.onerror = (e) => {
+          console.warn('Audio playback notice, using browser speech fallback:', e);
+          fallbackSpeech(text, options, cleanup);
+        };
+
+        await currentAudio.play();
+        return;
+      }
+
+      // Fallback to browser speech synthesis
+      fallbackSpeech(text, options, cleanup);
+    } catch (err) {
+      console.warn('TTS request error, using fallback:', err);
+      fallbackSpeech(text, options, cleanup);
     }
-
-    // Fallback to browser speech synthesis
-    fallbackSpeech(text, options);
-  } catch (err) {
-    console.warn('TTS request error, using fallback:', err);
-    fallbackSpeech(text, options);
-  }
+  });
 }
 
 function fallbackSpeech(
@@ -62,7 +75,8 @@ function fallbackSpeech(
     onStart?: () => void;
     onEnd?: () => void;
     onError?: (err: any) => void;
-  }
+  },
+  onDone?: () => void
 ) {
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.cancel();
@@ -95,18 +109,18 @@ function fallbackSpeech(
     }
 
     utterance.onend = () => {
-      options?.onEnd?.();
+      onDone?.();
     };
 
     utterance.onerror = (e) => {
       console.warn('Speech synthesis notice:', e);
       options?.onError?.(e);
-      options?.onEnd?.();
+      onDone?.();
     };
 
     window.speechSynthesis.speak(utterance);
   } else {
-    options?.onEnd?.();
+    onDone?.();
   }
 }
 
@@ -118,5 +132,9 @@ export function stopSpeaking() {
   }
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.cancel();
+  }
+  if (currentResolve) {
+    currentResolve();
+    currentResolve = null;
   }
 }
