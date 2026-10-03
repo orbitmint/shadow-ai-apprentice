@@ -6,6 +6,7 @@ import { Volume2, Send, Bot } from 'lucide-react';
 
 export const VoiceAgentPanel: React.FC = () => {
   const {
+    scenario,
     currentQuestion,
     dialogue,
     submitExpertAnswer,
@@ -51,33 +52,70 @@ export const VoiceAgentPanel: React.FC = () => {
               &ldquo;{currentQuestion}&rdquo;
             </p>
 
-            {/* Quick Answer Chips */}
+            {/* Quick Answer Chips (Dynamic based on active scenario) */}
             <div className="pt-2 flex flex-col gap-1.5">
               <span className="text-[10px] text-slate-400 font-medium">Quick responses:</span>
-              <button
-                onClick={() =>
-                  handleQuickAnswer('Anything over five grand for equipment has to be capex.')
-                }
-                className="text-left text-[11px] bg-[#1a202c] hover:bg-amber-500 hover:text-slate-950 text-slate-200 px-3 py-1.5 rounded-lg border border-white/[0.08] transition-all font-medium"
-              >
-                &ldquo;Over 5k is always capex&rdquo;
-              </button>
-              <button
-                onClick={() =>
-                  handleQuickAnswer('Delta tries to double-bill container fees every December.')
-                }
-                className="text-left text-[11px] bg-[#1a202c] hover:bg-amber-500 hover:text-slate-950 text-slate-200 px-3 py-1.5 rounded-lg border border-white/[0.08] transition-all font-medium"
-              >
-                &ldquo;Delta double-bills every Dec&rdquo;
-              </button>
-              <button
-                onClick={() =>
-                  handleQuickAnswer("If there is no asset tag, stop right there and ping the controller.")
-                }
-                className="text-left text-[11px] bg-[#1a202c] hover:bg-amber-500 hover:text-slate-950 text-slate-200 px-3 py-1.5 rounded-lg border border-white/[0.08] transition-all font-medium"
-              >
-                &ldquo;No asset tag = don&rsquo;t touch it&rdquo;
-              </button>
+              {scenario === 'incident' ? (
+                <>
+                  <button
+                    onClick={() =>
+                      handleQuickAnswer(
+                        'Rebooting the primary on a Tier 1 customer during 2 PM peak traffic kills 12,000 active transactions. Shift traffic to replica 4B instead.'
+                      )
+                    }
+                    className="text-left text-[11px] bg-[#1a202c] hover:bg-amber-500 hover:text-slate-950 text-slate-200 px-3 py-1.5 rounded-lg border border-white/[0.08] transition-all font-medium"
+                  >
+                    &ldquo;Peak hours: reboot drops 12k sessions&rdquo;
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleQuickAnswer(
+                        'Between noon and 5 PM EST, a primary reboot is strictly forbidden. If connection pools exceed 85%, failover to replica pool first.'
+                      )
+                    }
+                    className="text-left text-[11px] bg-[#1a202c] hover:bg-amber-500 hover:text-slate-950 text-slate-200 px-3 py-1.5 rounded-lg border border-white/[0.08] transition-all font-medium"
+                  >
+                    &ldquo;12-5 PM EST primary reboot forbidden&rdquo;
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleQuickAnswer(
+                        'Restarting ingress pods causes a stampede. Clear the Redis idempotency cache first.'
+                      )
+                    }
+                    className="text-left text-[11px] bg-[#1a202c] hover:bg-amber-500 hover:text-slate-950 text-slate-200 px-3 py-1.5 rounded-lg border border-white/[0.08] transition-all font-medium"
+                  >
+                    &ldquo;Purge Redis cache before restarting pods&rdquo;
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() =>
+                      handleQuickAnswer('Anything over five grand for equipment has to be capex.')
+                    }
+                    className="text-left text-[11px] bg-[#1a202c] hover:bg-amber-500 hover:text-slate-950 text-slate-200 px-3 py-1.5 rounded-lg border border-white/[0.08] transition-all font-medium"
+                  >
+                    &ldquo;Over 5k is always capex&rdquo;
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleQuickAnswer('Delta tries to double-bill container fees every December.')
+                    }
+                    className="text-left text-[11px] bg-[#1a202c] hover:bg-amber-500 hover:text-slate-950 text-slate-200 px-3 py-1.5 rounded-lg border border-white/[0.08] transition-all font-medium"
+                  >
+                    &ldquo;Delta double-bills every Dec&rdquo;
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleQuickAnswer('If there is no asset tag, stop right there and ping the controller.')
+                    }
+                    className="text-left text-[11px] bg-[#1a202c] hover:bg-amber-500 hover:text-slate-950 text-slate-200 px-3 py-1.5 rounded-lg border border-white/[0.08] transition-all font-medium"
+                  >
+                    &ldquo;No asset tag = don&rsquo;t touch it&rdquo;
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -93,7 +131,7 @@ export const VoiceAgentPanel: React.FC = () => {
               className={`flex flex-col ${isAgent ? 'items-start' : 'items-end'}`}
             >
               <span className="text-[10px] text-slate-400 mb-1 font-medium">
-                {isAgent ? 'Apprentice' : 'Sabine'}
+                {isAgent ? 'Apprentice' : scenario === 'incident' ? 'Marcus' : 'Sabine'}
               </span>
               <div
                 className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed shadow-sm ${
