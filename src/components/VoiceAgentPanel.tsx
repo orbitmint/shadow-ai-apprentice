@@ -79,6 +79,14 @@ export const VoiceAgentPanel: React.FC = () => {
     }
   };
 
+  const handleQuickAnswer = (ans: string) => {
+    submitExpertAnswer(ans);
+    if (isRecordingMic) {
+      recognitionRef.current?.stop();
+      setIsRecordingMic(false);
+    }
+  };
+
   return (
     <div className="bg-[#131720] border border-white/[0.08] rounded-2xl flex flex-col h-full overflow-hidden shadow-lg shadow-black/20">
       {/* Friendly Header */}
@@ -109,18 +117,36 @@ export const VoiceAgentPanel: React.FC = () => {
               &ldquo;{currentQuestion}&rdquo;
             </p>
 
-            <div className="pt-1 flex items-center gap-2 text-[11px] text-slate-400">
+            <div className="pt-1.5 flex flex-wrap items-center gap-2 text-[11px]">
               <button
                 type="button"
                 onClick={toggleMic}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-medium transition ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition ${
                   isRecordingMic
                     ? 'bg-rose-500 text-white border-rose-400 animate-pulse'
                     : 'bg-[#1a202c] hover:bg-[#222938] text-amber-300 border-white/[0.08]'
                 }`}
               >
                 {isRecordingMic ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-                <span>{isRecordingMic ? 'Listening to your voice...' : 'Answer with your voice'}</span>
+                <span>{isRecordingMic ? 'Listening to voice...' : 'Speak Answer'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleQuickAnswer(
+                    scenario === 'incident'
+                      ? 'Rebooting during peak traffic kills 12,000 active transactions. Shift traffic to replica 4B instead.'
+                      : 'Anything in equipment over five grand has to be capex for tax depreciation.'
+                  )
+                }
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.08] bg-[#1a202c] hover:bg-amber-500 hover:text-slate-950 text-slate-300 text-xs font-medium transition"
+              >
+                <span>
+                  {scenario === 'incident'
+                    ? '💬 1-Click: "Shift to replica 4B"'
+                    : '💬 1-Click: "Over 5k is capex"'}
+                </span>
               </button>
             </div>
           </div>

@@ -1,5 +1,8 @@
 let currentAudio: HTMLAudioElement | null = null;
 let currentResolve: (() => void) | null = null;
+// Hold active utterance in module scope to prevent premature garbage collection in Chrome/WebKit
+let activeUtterance: SpeechSynthesisUtterance | null = null;
+let keepAliveTimer: NodeJS.Timeout | null = null;
 
 export async function speakText(
   text: string,
@@ -17,6 +20,11 @@ export async function speakText(
     currentResolve = resolve;
 
     const cleanup = () => {
+      if (keepAliveTimer) {
+        clearInterval(keepAliveTimer);
+        keepAliveTimer = null;
+      }
+      activeUtterance = null;
       options?.onEnd?.();
       if (currentResolve) {
         currentResolve();
@@ -79,8 +87,11 @@ function fallbackSpeech(
   onDone?: () => void
 ) {
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    // Cancel any previous hung speech
     window.speechSynthesis.cancel();
+
     const utterance = new SpeechSynthesisUtterance(text);
+    activeUtterance = utterance; // Prevent premature GC in Chrome
 
     // Persona pitch & rate modulation
     if (options?.persona === 'sabine') {
@@ -88,7 +99,7 @@ function fallbackSpeech(
       utterance.pitch = 0.9;
     } else {
       utterance.rate = 1.05;
-      utterance.pitch = 1.1;
+      utterance.pitch = 1.05;
     }
 
     const voices = window.speechSynthesis.getVoices();
@@ -99,7 +110,7 @@ function fallbackSpeech(
       if (deVoice) utterance.voice = deVoice;
     } else {
       const femaleVoices = voices.filter(
-        (v) => v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Victoria')
+        (v) => v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Victoria') || v.name.includes('Google')
       );
       if (options?.persona === 'sabine' && femaleVoices.length > 1) {
         utterance.voice = femaleVoices[1];
@@ -109,14 +120,35 @@ function fallbackSpeech(
     }
 
     utterance.onend = () => {
+      if (keepAliveTimer) {
+        clearInterval(keepAliveTimer);
+        keepAliveTimer = null;
+      }
+      activeUtterance = null;
       onDone?.();
     };
 
     utterance.onerror = (e) => {
       console.warn('Speech synthesis notice:', e);
+      if (keepAliveTimer) {
+        clearInterval(keepAliveTimer);
+        keepAliveTimer = null;
+      }
+      activeUtterance = null;
       options?.onError?.(e);
       onDone?.();
     };
+
+    // Chromium pause/resume keep-alive to prevent speech synthesis pausing after ~4 seconds
+    keepAliveTimer = setInterval(() => {
+      if (typeof window !== 'undefined' && window.speechSynthesis.speaking) {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      } else if (keepAliveTimer) {
+        clearInterval(keepAliveTimer);
+        keepAliveTimer = null;
+      }
+    }, 3500);
 
     window.speechSynthesis.speak(utterance);
   } else {
@@ -125,6 +157,12 @@ function fallbackSpeech(
 }
 
 export function stopSpeaking() {
+  if (keepAliveTimer) {
+    clearInterval(keepAliveTimer);
+    keepAliveTimer = null;
+  }
+  activeUtterance = null;
+
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.currentTime = 0;

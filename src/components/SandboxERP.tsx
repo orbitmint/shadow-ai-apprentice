@@ -90,25 +90,16 @@ export const SandboxERP: React.FC = () => {
   const [isRunningDemo, setIsRunningDemo] = useState(false);
   const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  // Quick Demo Runs (Completes a single full interaction end-to-end with zero jumping)
+  // Quick Demo Runs (Performs expert action and lets apprentice question play completely)
   const runSabineDemo = async () => {
     if (isRunningDemo) return;
     setIsRunningDemo(true);
 
     try {
-      // 1. Switch Invoice 4471 to Capex 0400
+      // Switch Invoice 4471 to Capex 0400
       setSelectedInvoiceId('inv-4471');
-      await wait(600);
+      await wait(500);
       handleCostCenterChange('0400 • Fixed Assets (Capex)');
-
-      // 2. Allow apprentice question to speak cleanly and pause
-      await wait(5000);
-
-      // 3. Sabine speaks her explanation and apprentice acknowledges
-      await submitExpertAnswer(
-        'Anything in equipment over five grand has to be capex for tax depreciation.',
-        true
-      );
     } finally {
       setIsRunningDemo(false);
     }
@@ -119,19 +110,10 @@ export const SandboxERP: React.FC = () => {
     setIsRunningDemo(true);
 
     try {
-      // 1. Failover Shard 4B
+      // Failover Shard 4B
       setSelectedIncidentId('inc-8822');
-      await wait(600);
+      await wait(500);
       handleMitigationChange('Shift Ingress to Read-Replica Shard 4B');
-
-      // 2. Allow apprentice question to speak cleanly and pause
-      await wait(5000);
-
-      // 3. Marcus speaks his explanation and apprentice acknowledges
-      await submitExpertAnswer(
-        'Rebooting during peak traffic kills 12,000 active transactions. Shift traffic to replica 4B instead.',
-        true
-      );
     } finally {
       setIsRunningDemo(false);
     }
